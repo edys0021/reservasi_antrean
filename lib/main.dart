@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:convert';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
@@ -8,7 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:flutter/services.dart';
-import 'dart:io';
+import 'pages/err_page.dart';
 
 void main() async {
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -22,20 +23,26 @@ void main() async {
       debug: true, // optional: set false to disable printing logs to console,
       ignoreSsl: true // optional: set true to ignore ssl,
       );
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: ThemeData(scaffoldBackgroundColor: const Color.fromRGBO(33, 146, 229, 1)),
       debugShowCheckedModeBanner: false,
+      // ignore: prefer_const_constructors
       home: WebViewScreen(),
     );
   }
 }
 
 class WebViewScreen extends StatefulWidget {
+  const WebViewScreen({super.key});
+
   @override
   _WebViewScreen createState() => _WebViewScreen();
 }
@@ -43,6 +50,8 @@ class WebViewScreen extends StatefulWidget {
 class _WebViewScreen extends State<WebViewScreen> {
   InAppWebViewController? webViewController;
   String pathurl = "";
+  bool showErrorPage = false;
+
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
@@ -70,7 +79,8 @@ class _WebViewScreen extends State<WebViewScreen> {
                 Expanded(
                     child: InAppWebView(
                   initialUrlRequest: URLRequest(
-                      url: Uri.parse('https://demo-cerbisque.cpm.systems/')),
+                      url:
+                          Uri.parse('https://brique.bri.co.id/')),
                   onWebViewCreated: (controller) {
                     webViewController = controller;
                   },
@@ -117,11 +127,14 @@ class _WebViewScreen extends State<WebViewScreen> {
                           downloadStartRequest.suggestedFilename);
                     }
                   },
-                  onLoadError: (InAppWebViewController controller, Uri? url,
-                      int code, String message) {
-                    print("$message -- $url -- $code --EDY021");
+                  onLoadError: (controller, url, code, message) {
+                    showError();
+                  },
+                  onLoadHttpError: (controller, url, statusCode, description) {
+                    showError();
                   },
                 )),
+                showErrorPage ? const ErrPage() : const SizedBox(height: 0, width: 0)
               ],
             ),
           ),
@@ -175,6 +188,12 @@ class _WebViewScreen extends State<WebViewScreen> {
         );
       }
     }
+  }
+
+  void showError() async {
+    setState(() {
+      showErrorPage = true;
+    });
   }
 
   Future<String> downloadBase64(String url, String extension) async {
@@ -257,21 +276,21 @@ class _WebViewScreen extends State<WebViewScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, height: 1.6),
             ),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+            shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(16))),
             contentPadding: const EdgeInsets.only(
                 left: 10.0, right: 10.0, top: 8.0, bottom: 5.0),
             actions: <Widget>[
-               ElevatedButton(
+              ElevatedButton(
                 child: const Text('Keluar',
-                    style:  TextStyle(color: Color.fromRGBO(215, 52, 2, 1))),
+                    style: TextStyle(color: Color.fromRGBO(215, 52, 2, 1))),
                 onPressed: () {
-                 exit(0);
+                  exit(0);
                 },
-                style: ButtonStyle(shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)
-                  )
-                )),
+                style: ButtonStyle(
+                    shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                        RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)))),
               ),
               ElevatedButton(
                 child: const Text('Tetap',
@@ -279,11 +298,10 @@ class _WebViewScreen extends State<WebViewScreen> {
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                style: ButtonStyle(shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)
-                  )
-                )),
+                style: ButtonStyle(
+                    shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                        RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)))),
               ),
             ],
           );

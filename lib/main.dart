@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:flutter/services.dart';
+import 'package:connectivity/connectivity.dart';
 import 'pages/err_page.dart';
 
 void main() async {
@@ -32,7 +33,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(scaffoldBackgroundColor: const Color.fromRGBO(33, 146, 229, 1)),
+      theme: ThemeData(
+          scaffoldBackgroundColor: const Color.fromRGBO(33, 146, 229, 1)),
       debugShowCheckedModeBanner: false,
       // ignore: prefer_const_constructors
       home: WebViewScreen(),
@@ -51,13 +53,21 @@ class _WebViewScreen extends State<WebViewScreen> {
   InAppWebViewController? webViewController;
   String pathurl = "";
   bool showErrorPage = false;
-
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
+  ConnectivityResult _connectionStatus = ConnectivityResult.none;
 
   @override
   void initState() {
     super.initState();
+
+    Connectivity().onConnectivityChanged.listen((result) {
+      setState(() {
+        _connectionStatus = result;
+      });
+    });
+
+    checkConnectivity();
     _requestNotificationPermissions();
     _configureLocalNotifications();
   }
@@ -73,72 +83,90 @@ class _WebViewScreen extends State<WebViewScreen> {
           onPopScopePressBackShowAlertDialog();
         },
         child: Scaffold(
-          body: SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                    child: InAppWebView(
-                  initialUrlRequest: URLRequest(
-                      url:
-                          Uri.parse('https://brique.bri.co.id/')),
-                  onWebViewCreated: (controller) {
-                    webViewController = controller;
-                  },
-                  androidOnGeolocationPermissionsShowPrompt:
-                      (InAppWebViewController controller, String origin) async {
-                    return GeolocationPermissionShowPromptResponse(
-                        origin: origin, allow: true, retain: true);
-                  },
-                  initialOptions: InAppWebViewGroupOptions(
-                    crossPlatform: InAppWebViewOptions(
-                      useShouldOverrideUrlLoading: true,
-                      useOnDownloadStart: true,
-                      mediaPlaybackRequiresUserGesture: false,
+            body: _connectionStatus != ConnectivityResult.none
+                ? SafeArea(
+                    child: Column(
+                      children: [
+                        Expanded(
+                            child: InAppWebView(
+                          initialUrlRequest: URLRequest(
+                              url: Uri.parse(
+                                  'https://demo-cerbisque.cpm.systems/')),
+                          onWebViewCreated: (controller) {
+                            webViewController = controller;
+                          },
+                          androidOnGeolocationPermissionsShowPrompt:
+                              (InAppWebViewController controller,
+                                  String origin) async {
+                            return GeolocationPermissionShowPromptResponse(
+                                origin: origin, allow: true, retain: true);
+                          },
+                          initialOptions: InAppWebViewGroupOptions(
+                            crossPlatform: InAppWebViewOptions(
+                              useShouldOverrideUrlLoading: true,
+                              useOnDownloadStart: true,
+                              mediaPlaybackRequiresUserGesture: false,
+                            ),
+                            android: AndroidInAppWebViewOptions(
+                              useHybridComposition: true,
+                              supportMultipleWindows: true,
+                              useWideViewPort: true,
+                              geolocationEnabled: true,
+                            ),
+                          ),
+                          androidOnPermissionRequest:
+                              (InAppWebViewController controller, String origin,
+                                  List<String> resources) async {
+                            return PermissionRequestResponse(
+                                resources: resources,
+                                action: PermissionRequestResponseAction.GRANT);
+                          },
+                          onDownloadStartRequest:
+                              (controller, downloadStartRequest) async {
+                            String file64 = downloadStartRequest.url
+                                .toString()
+                                .split(":")[0];
+                            if (file64 == "data") {
+                              String extension = downloadStartRequest.url
+                                  .toString()
+                                  .split(";")[0]
+                                  .split(":")[1]
+                                  .split("/")[1];
+                              await downloadBase64(
+                                  downloadStartRequest.url
+                                      .toString()
+                                      .split(",")[1],
+                                  extension);
+                            } else {
+                              await downloadFile(
+                                  downloadStartRequest.url.toString(),
+                                  downloadStartRequest.suggestedFilename);
+                            }
+                          },
+                          onLoadError: (controller, url, code, message) {
+                            showError();
+                          },
+                          onLoadHttpError:
+                              (controller, url, statusCode, description) {
+                            showError();
+                          },
+                        )),
+                        showErrorPage
+                            ? const ErrPage()
+                            : const SizedBox(height: 0, width: 0)
+                      ],
                     ),
-                    android: AndroidInAppWebViewOptions(
-                      useHybridComposition: true,
-                      supportMultipleWindows: true,
-                      useWideViewPort: true,
-                      geolocationEnabled: true,
-                    ),
-                  ),
-                  androidOnPermissionRequest:
-                      (InAppWebViewController controller, String origin,
-                          List<String> resources) async {
-                    return PermissionRequestResponse(
-                        resources: resources,
-                        action: PermissionRequestResponseAction.GRANT);
-                  },
-                  onDownloadStartRequest:
-                      (controller, downloadStartRequest) async {
-                    String file64 =
-                        downloadStartRequest.url.toString().split(":")[0];
-                    if (file64 == "data") {
-                      String extension = downloadStartRequest.url
-                          .toString()
-                          .split(";")[0]
-                          .split(":")[1]
-                          .split("/")[1];
-                      await downloadBase64(
-                          downloadStartRequest.url.toString().split(",")[1],
-                          extension);
-                    } else {
-                      await downloadFile(downloadStartRequest.url.toString(),
-                          downloadStartRequest.suggestedFilename);
-                    }
-                  },
-                  onLoadError: (controller, url, code, message) {
-                    showError();
-                  },
-                  onLoadHttpError: (controller, url, statusCode, description) {
-                    showError();
-                  },
-                )),
-                showErrorPage ? const ErrPage() : const SizedBox(height: 0, width: 0)
-              ],
-            ),
-          ),
-        ));
+                  )
+                : ErrPage()));
+  }
+
+  Future<void> checkConnectivity() async {
+    var connectivityResult = await Connectivity().checkConnectivity();
+    print("${_connectionStatus != ConnectivityResult.none} EDYS00000021");
+
+    setState(() {
+      _connectionStatus = connectivityResult;
+    });
   }
 
   Future<void> downloadFile(String url, [String? filename]) async {

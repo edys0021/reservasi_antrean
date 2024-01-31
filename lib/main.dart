@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:flutter/services.dart';
 import 'package:connectivity/connectivity.dart';
+import 'package:geolocator/geolocator.dart';
 import 'pages/err_page.dart';
 
 void main() async {
@@ -20,6 +21,7 @@ void main() async {
   await Permission.location.request();
   await Permission.camera.request();
   // await Permission.photos.request();
+
   await FlutterDownloader.initialize(
       debug: true, // optional: set false to disable printing logs to console,
       ignoreSsl: true // optional: set true to ignore ssl,
@@ -53,6 +55,7 @@ class _WebViewScreen extends State<WebViewScreen> {
   InAppWebViewController? webViewController;
   String pathurl = "";
   bool showErrorPage = false;
+  bool isLocationEnabled = true;
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
   ConnectivityResult _connectionStatus = ConnectivityResult.none;
@@ -151,9 +154,6 @@ class _WebViewScreen extends State<WebViewScreen> {
                             showError();
                           },
                         )),
-                        showErrorPage
-                            ? const ErrPage()
-                            : const SizedBox(height: 0, width: 0)
                       ],
                     ),
                   )
@@ -162,10 +162,17 @@ class _WebViewScreen extends State<WebViewScreen> {
 
   Future<void> checkConnectivity() async {
     var connectivityResult = await Connectivity().checkConnectivity();
-    print("${_connectionStatus != ConnectivityResult.none} EDYS00000021");
 
     setState(() {
       _connectionStatus = connectivityResult;
+    });
+  }
+
+  Future<void> checkGps() async {
+    var locationEnabled = await Geolocator.isLocationServiceEnabled();
+    print("${locationEnabled} EDYS00000021");
+    setState(() {
+      isLocationEnabled = locationEnabled;
     });
   }
 
@@ -220,7 +227,7 @@ class _WebViewScreen extends State<WebViewScreen> {
 
   void showError() async {
     setState(() {
-      showErrorPage = true;
+      _connectionStatus = ConnectivityResult.none;
     });
   }
 

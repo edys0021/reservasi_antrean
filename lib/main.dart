@@ -94,7 +94,7 @@ class _WebViewScreen extends State<WebViewScreen> {
                             child: InAppWebView(
                           initialUrlRequest: URLRequest(
                               url: Uri.parse(
-                                  'https://demo-cerbisque.cpm.systems/')),
+                                  'https://brique.bri.co.id/')),
                           onWebViewCreated: (controller) {
                             webViewController = controller;
                           },
@@ -170,7 +170,6 @@ class _WebViewScreen extends State<WebViewScreen> {
 
   Future<void> checkGps() async {
     var locationEnabled = await Geolocator.isLocationServiceEnabled();
-    print("${locationEnabled} EDYS00000021");
     setState(() {
       isLocationEnabled = locationEnabled;
     });

@@ -23,8 +23,8 @@ void main() async {
   // await Permission.photos.request();
 
   await FlutterDownloader.initialize(
-      debug: true, // optional: set false to disable printing logs to console,
-      ignoreSsl: true // optional: set true to ignore ssl,
+      debug: false, // optional: set false to disable printing logs to console,
+      ignoreSsl: false // optional: set true to ignore ssl,
       );
   runApp(const MyApp());
 }
